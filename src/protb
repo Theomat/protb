@@ -1,0 +1,169 @@
+#!/usr/bin/env ruby
+# Imports ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+require 'optparse'
+require_relative 'parser.rb'
+require_relative 'protocol.rb'
+# Constants ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+$NAME = "protb"
+$VERSION = "0.0.1"
+# Globals ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+$generators = []
+# Module Globals +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+options = {
+  :verbose => false,
+  :language => "Java",
+  :output => "./generated",
+  :input => ".",
+  :options => "",
+  :glue => true
+}
+languages = []
+# Loading generators ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+current = Dir.pwd
+Dir.chdir(File.join(File.dirname(__FILE__), 'generators'))
+Dir.glob(File.join('**', '*.rb')).each { |file|
+  require_relative "./generators/#{file}"
+}
+Dir.chdir(current)
+# Compute available languages ++++++++++++++++++++++++++++++++++++++++++++++++++
+$generators.each { |e|
+  if not languages.include? e.language
+    languages.push e.language
+  end
+}
+# Options parsing ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+OptionParser.new do |parser|
+  parser.banner = "Usage: protb [options]"
+  # PRINT AND EXIT FUNCTIONS ---------------------------------------------------
+  # HELP MESSAGE
+  parser.on("-h", "--help", "Show this help message") do ||
+    puts parser
+    exit 0
+  end
+  # VERSION MESSAGE
+  parser.on("--version", "Show version") do ||
+    puts "#{$NAME}: version #{$VERSION}"
+    exit 0
+  end
+  # LIST MESSAGE
+  parser.on("--info INFO", "Get more info on the specified object") do |v|
+    if v == "languages" or v == "langs"
+      puts "#{$NAME}: supported languages: #{languages.join(", ")}"
+    elsif v == "generators"
+      puts "#{$NAME}: supported generators:"
+      $generators.each { |e|
+        puts "\t#{e.name} v#{e.version} (#{e.language})"
+      }
+    else
+      potential = $generators.select{ |gen| gen.name == v or gen.language.downcase() == v.downcase() }
+      if potential.length > 0
+        puts "#{$NAME}: info about #{v}:"
+        potential.each { |e|
+          puts "\t#{e.name} v#{e.version} (#{e.language}) : #{e.description}"
+          puts "\t\toptions: "
+          e.options.to_a().each { |e|
+            puts "\t\t\t#{e[0]} = '#{e[1]}'"
+          }
+        }
+      else
+        STDERR.puts "#{$NAME}: unknown object '#{v}'"
+        exit 1
+      end
+    end
+    exit 0
+  end
+  # GENERATION FUNCTIONS -------------------------------------------------------
+  # LANGUAGE
+  parser.on("-l", "--lang LANGUAGE", "The language used to generate the code") do |v|
+    options[:language] = v
+  end
+  # OUTPUT DIRECTORY
+  parser.on("-o", "--output OUTPUT", "The output directory") do |v|
+    options[:output] = v
+  end
+  # INPUT DIRECTORY
+  parser.on("-f", "--file PROTOCOL_DIR", "The directory of the protocol") do |v|
+    options[:input] = v
+  end
+  # NO GLUE MODE
+  parser.on("--no-glue", "Glue code is not generated") do ||
+      options[:glue] = false
+  end
+  # GENERATOR OPTIONS
+  parser.on("-opt", "--options OPTIONS", "Additional options for the generator") do |v|
+    options[:options] = v
+  end
+  # VERBOSE MODE
+  parser.on("-v", "--verbose", "Verbose mode") do ||
+    options[:verbose] = true
+  end
+end.parse!
+# Options verification +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Checking input directory exists
+file = options[:input]
+if not File.exist? file
+  STDERR.puts "#{$NAME}: #{file} does not exist."
+  exit 1
+end
+# Checking language is supported
+lang = options[:language]
+if languages.select{ |language| lang.downcase() == language.downcase()}.empty?()
+  STDERR.puts "#{$NAME}: language #{lang} is not supported."
+  exit 1
+end
+# Load all files +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Dir.glob(File.join(options[:input], '**', '*.json')).each { |file|
+  parsed = Parser.parseJSONFile(file)
+  if Parser.error
+    STDERR.puts "#{$NAME}: #{Parser.error}"
+    exit 1
+  else
+    Protocol.add parsed
+  end
+  if options[:verbose]
+    puts "#{$NAME}: parsed #{file}"
+  end
+}
+if options[:verbose]
+  puts "#{$NAME}: loaded #{Protocol.describe}"
+end
+# Check for types ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+type_error = Protocol.check_types
+if type_error
+  STDERR.puts "#{$NAME}: #{type_error}"
+  exit 1
+end
+# Find correct exported ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+valid_generators = $generators.select { |generator| generator.language.downcase() == options[:language].downcase()}
+generator = nil
+if valid_generators.length > 1
+  STDERR.puts "#{$NAME}: multiple generators are available: ambiguous"
+  exit 1
+else
+  generator = valid_generators[0]
+end
+# Passing options to generator +++++++++++++++++++++++++++++++++++++++++++++++++
+generator_options = {}
+pairs = options[:options].split(";").each { |line|
+  data = line.split(/([\w\.]+)\s*=\s*([^;\s]*)\s*/)
+  if data.length == 3
+    generator_options[data[1].strip] = data[2].strip
+  end
+}
+generator.configure generator_options
+# Pack the protocol ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+error, message = Protocol.pack()
+if error
+  STDERR.puts "#{$NAME}: #{message}"
+  exit 1
+end
+if options[:verbose]
+  saved_size, original_size = Protocol.sizes()
+  saved = ((original_size-saved_size) * 100 / original_size)
+  puts "#{$NAME}: down to #{saved_size} bytes from #{original_size} bytes, saved #{saved}%"
+end
+# Export +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Protocol.export(generator, options[:input], options[:output], options[:glue])
+if options[:verbose]
+  puts "#{$NAME}: generated #{Protocol.describe}"
+end

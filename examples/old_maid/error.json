@@ -1,0 +1,10 @@
+{
+  "name": "error",
+  "data": [{
+    "name": "errorCode",
+    "type": "long"
+  }, {
+    "name": "errorMessage",
+    "type": "string"
+  }]
+}

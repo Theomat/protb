@@ -1,0 +1,13 @@
+{
+  "name": "card",
+  "object": true,
+  "data": [{
+      "name": "color",
+      "length": 2
+    },
+    {
+      "name": "height",
+      "length": 4
+    }
+  ]
+}

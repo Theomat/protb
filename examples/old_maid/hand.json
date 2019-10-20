@@ -1,0 +1,8 @@
+{
+  "name": "hand",
+  "data": [{
+    "name": "cards",
+    "type": "array",
+    "subtype": "card"
+  }]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "pick_card",
+  "data": [{
+      "name": "picker",
+      "type": "string"
+    },
+    {
+      "name": "card",
+      "type": "card"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "ethernet",
+  "data": [{
+    "name": "preamble",
+    "after": "none",
+    "type": "long"
+  }, {
+    "name": "dst_adress",
+    "length": 48,
+    "type": "long",
+    "after": "preamble"
+  }, {
+    "name": "src_adress",
+    "length": 48,
+    "type": "long",
+    "after": "dst_adress"
+  }, {
+    "name": "type",
+    "length": 16,
+    "type": "short",
+    "after": "src_adress"
+  }]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "chat_message",
+  "data": [{
+    "name": "sender",
+    "type": "string"
+  }, {
+    "name": "message",
+    "type": "string"
+  }]
+}

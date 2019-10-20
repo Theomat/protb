@@ -1,0 +1,16 @@
+{
+  "name": "pair_played",
+  "data": [{
+      "name": "player",
+      "type": "string"
+    },
+    {
+      "name": "first_card",
+      "type": "card"
+    },
+    {
+      "name": "second_card",
+      "type": "card"
+    }
+  ]
+}

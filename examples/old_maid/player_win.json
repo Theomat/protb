@@ -1,0 +1,7 @@
+{
+  "name": "player_win",
+  "data": [{
+    "name": "winner",
+    "type": "string"
+  }]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "player_lose",
+  "data": [{
+    "name": "loser",
+    "type": "string"
+  }]
+}
